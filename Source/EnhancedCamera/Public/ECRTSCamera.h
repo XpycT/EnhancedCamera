@@ -13,6 +13,18 @@ class USphereComponent;
 class UInputMappingContext;
 class UInputAction;
 
+USTRUCT()
+struct FMoveCameraCommand
+{
+	GENERATED_BODY()
+	UPROPERTY()
+	float X = 0;
+	UPROPERTY()
+	float Y = 0;
+	UPROPERTY()
+	float Scale = 0;
+};
+
 UCLASS()
 class ENHANCEDCAMERA_API AECRTSCamera : public APawn
 {
@@ -38,6 +50,9 @@ public:
 	TObjectPtr<UInputAction> MoveCameraAxis;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Inputs")
 	TObjectPtr<UInputAction> ZoomCamera;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Camera | Movement Settings")
+	float MoveSpeed = 50.0f;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Zoom Settings")
 	float MinimumZoom;
@@ -59,12 +74,18 @@ protected:
 	void OnRotateCamera(const FInputActionValue& Value);
 	void OnMoveCamera(const FInputActionValue& Value);
 
+	void ApplyMoveCameraCommands();
+
+	float DeltaSeconds;
 	UPROPERTY()
 	float DesiredZoom;
 
 private:
 	void BindInputMappingContext() const;
-	void ApplyCameraZoomToDesired(float DeltaTime) const;
+	void ApplyCameraZoomToDesired() const;
+	void RequestMoveCamera(const float X, const float Y, const float Scale);
+	UPROPERTY()
+	TArray<FMoveCameraCommand> MoveCameraCommands;
 	
 public:	
 	virtual void Tick(float DeltaTime) override;

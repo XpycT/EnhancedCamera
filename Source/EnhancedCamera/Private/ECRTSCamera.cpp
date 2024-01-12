@@ -9,6 +9,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 
 AECRTSCamera::AECRTSCamera()
 {
@@ -52,7 +53,9 @@ void AECRTSCamera::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	ApplyCameraZoomToDesired(DeltaTime);
+	DeltaSeconds = DeltaTime;
+	ApplyCameraZoomToDesired();
+	ApplyMoveCameraCommands();
 }
 
 void AECRTSCamera::OnZoomCamera(const FInputActionValue& Value)
@@ -70,6 +73,41 @@ void AECRTSCamera::OnRotateCamera(const FInputActionValue& Value)
 
 void AECRTSCamera::OnMoveCamera(const FInputActionValue& Value)
 {
+	RequestMoveCamera(
+		SpringArm->GetRightVector().X,
+		SpringArm->GetRightVector().Y,
+		Value.Get<FVector2D>().X
+	);
+
+	RequestMoveCamera(
+		SpringArm->GetForwardVector().X,
+		SpringArm->GetForwardVector().Y,
+		Value.Get<FVector2D>().Y
+	);
+}
+
+void AECRTSCamera::ApplyMoveCameraCommands()
+{
+	for (const auto& [X, Y, Scale] : MoveCameraCommands)
+	{
+		auto Movement = FVector2D(X, Y);
+		Movement.Normalize();
+		Movement *= MoveSpeed * Scale * DeltaSeconds;
+		// const FVector CurrentTargetVector = UKismetMathLibrary::VInterpTo(GetActorLocation(), GetActorLocation() + FVector(Movement.X, Movement.Y, 0.0f), DeltaSeconds,1);
+		// SetActorLocation(FVector(CurrentTargetVector.X, CurrentTargetVector.Y, GetActorLocation().Z));
+		SetActorLocation(GetActorLocation() + FVector(Movement.X, Movement.Y, 0.0f));
+	}
+
+	MoveCameraCommands.Empty();
+}
+
+void AECRTSCamera::RequestMoveCamera(const float X, const float Y, const float Scale)
+{
+	FMoveCameraCommand MoveCameraCommand;
+	MoveCameraCommand.X = X;
+	MoveCameraCommand.Y = Y;
+	MoveCameraCommand.Scale = Scale;
+	MoveCameraCommands.Push(MoveCameraCommand);
 }
 
 void AECRTSCamera::BindInputMappingContext() const
@@ -89,12 +127,12 @@ void AECRTSCamera::BindInputMappingContext() const
 	}
 }
 
-void AECRTSCamera::ApplyCameraZoomToDesired(float DeltaTime) const
+void AECRTSCamera::ApplyCameraZoomToDesired() const
 {
 	SpringArm->TargetArmLength = FMath::FInterpTo(
 		SpringArm->TargetArmLength,
 		DesiredZoom,
-		DeltaTime,
+		DeltaSeconds,
 		ZoomSmoothness
 	);
 }
