@@ -54,8 +54,25 @@ public:
 	TObjectPtr<UInputAction> ResetCamera;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Camera | Movement Settings")
-	float MoveSpeed = 50.0f;
+	float MoveSpeed = 5000.0f;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Height Adjustment")
+	bool EnableDynamicCameraHeight;
+	UPROPERTY(
+		BlueprintReadWrite,
+		EditAnywhere,
+		Category = "Enhanced Camera | Height Adjustment",
+		meta=(EditCondition="EnableDynamicCameraHeight")
+		)
+	TEnumAsByte<ECollisionChannel> CollisionChannel;
+	UPROPERTY(
+		BlueprintReadWrite,
+		EditAnywhere,
+		Category = "Enhanced Camera | Height Adjustment",
+		meta=(EditCondition="EnableDynamicCameraHeight")
+		)
+	float FindGroundTraceLength;
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Zoom Settings")
 	float MinimumZoom;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Zoom Settings")
@@ -91,6 +108,8 @@ protected:
 	
 
 	void ApplyMoveCameraCommands();
+	void ApplyCameraZoomToDesired() const;
+	void ApplyDynamicCameraHeight();
 
 	float DeltaSeconds;
 	UPROPERTY()
@@ -98,7 +117,6 @@ protected:
 
 private:
 	void BindInputMappingContext() const;
-	void ApplyCameraZoomToDesired() const;
 	void RequestMoveCamera(const float X, const float Y, const float Scale);
 	UPROPERTY()
 	TArray<FMoveCameraCommand> MoveCameraCommands;

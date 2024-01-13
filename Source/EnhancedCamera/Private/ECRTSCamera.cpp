@@ -39,6 +39,10 @@ AECRTSCamera::AECRTSCamera()
 	MinimumZoom = 500;
 	ZoomSmoothness = 3;
 	ZoomSpeed = 200;
+
+	EnableDynamicCameraHeight = true;
+	FindGroundTraceLength = 100000.f;
+	CollisionChannel = ECC_WorldStatic;
 }
 
 void AECRTSCamera::SetInitialValues()
@@ -71,6 +75,7 @@ void AECRTSCamera::Tick(float DeltaTime)
 	DeltaSeconds = DeltaTime;
 	ApplyCameraZoomToDesired();
 	ApplyMoveCameraCommands();
+	ApplyDynamicCameraHeight();
 }
 
 void AECRTSCamera::OnZoomCamera(const FInputActionValue& Value)
@@ -166,6 +171,33 @@ void AECRTSCamera::ApplyCameraZoomToDesired() const
 		DeltaSeconds,
 		ZoomSmoothness
 	);
+}
+
+void AECRTSCamera::ApplyDynamicCameraHeight()
+{
+	if (EnableDynamicCameraHeight)
+	{
+		const auto RootWorldLocation = GetActorLocation();
+		const TArray<AActor*> ActorsToIgnore;
+
+		auto HitResult = FHitResult();
+		auto DidHit = UKismetSystemLibrary::LineTraceSingle(
+			GetWorld(),
+			FVector(RootWorldLocation.X, RootWorldLocation.Y, RootWorldLocation.Z + FindGroundTraceLength),
+			FVector(RootWorldLocation.X, RootWorldLocation.Y, RootWorldLocation.Z - FindGroundTraceLength),
+			UEngineTypes::ConvertToTraceType(CollisionChannel),
+			true,
+			ActorsToIgnore,
+			EDrawDebugTrace::Type::None,
+			HitResult,
+			true
+		);
+
+		if (DidHit)
+		{
+			SetActorLocation(FVector( HitResult.Location.X, HitResult.Location.Y, HitResult.Location.Z ));
+		}
+	}
 }
 
 void AECRTSCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
