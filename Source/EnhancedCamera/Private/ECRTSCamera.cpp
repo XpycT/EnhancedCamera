@@ -31,10 +31,26 @@ AECRTSCamera::AECRTSCamera()
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>("Camera");
 	CameraComponent->SetupAttachment(SpringArm);
 
+	bUseControllerRotationPitch = true;
+	bUseControllerRotationRoll = true;
+	bUseControllerRotationYaw = true;
+
 	MaximumZoom = 5000;
 	MinimumZoom = 500;
 	ZoomSmoothness = 3;
 	ZoomSpeed = 200;
+}
+
+void AECRTSCamera::SetInitialValues()
+{
+	PlayerController = GetWorld()->GetFirstPlayerController();
+	PlayerController->bShowMouseCursor = true;
+	PlayerController->PlayerCameraManager->ViewPitchMax = ViewPitchMax;
+	PlayerController->PlayerCameraManager->ViewPitchMin = ViewPitchMin;
+	
+	DefaultZoom = SpringArm->TargetArmLength;
+	DesiredZoom = DefaultZoom;
+	DefaultRotation = GetControlRotation();
 }
 
 // Called when the game starts or when spawned
@@ -42,8 +58,7 @@ void AECRTSCamera::BeginPlay()
 {
 	Super::BeginPlay();
 
-	PlayerController = GetWorld()->GetFirstPlayerController();
-	DesiredZoom = SpringArm->TargetArmLength;
+	SetInitialValues();
 	
 	BindInputMappingContext();
 }
@@ -69,6 +84,20 @@ void AECRTSCamera::OnZoomCamera(const FInputActionValue& Value)
 
 void AECRTSCamera::OnRotateCamera(const FInputActionValue& Value)
 {
+	if (Controller != nullptr)
+	{
+		const FVector2D LookValue = Value.Get<FVector2D>();
+ 
+		if (LookValue.X != 0.f)
+		{
+			AddControllerYawInput(LookValue.X * RotateSpeed * DeltaSeconds);
+		}
+ 
+		if (LookValue.Y != 0.f)
+		{
+			AddControllerPitchInput(LookValue.Y * RotateSpeed * DeltaSeconds);
+		}
+	}
 }
 
 void AECRTSCamera::OnMoveCamera(const FInputActionValue& Value)
@@ -86,6 +115,12 @@ void AECRTSCamera::OnMoveCamera(const FInputActionValue& Value)
 	);
 }
 
+void AECRTSCamera::OnResetCamera(const FInputActionValue& Value)
+{
+	DesiredZoom = DefaultZoom;
+	Controller->SetControlRotation(DefaultRotation);
+}
+
 void AECRTSCamera::ApplyMoveCameraCommands()
 {
 	for (const auto& [X, Y, Scale] : MoveCameraCommands)
@@ -93,8 +128,6 @@ void AECRTSCamera::ApplyMoveCameraCommands()
 		auto Movement = FVector2D(X, Y);
 		Movement.Normalize();
 		Movement *= MoveSpeed * Scale * DeltaSeconds;
-		// const FVector CurrentTargetVector = UKismetMathLibrary::VInterpTo(GetActorLocation(), GetActorLocation() + FVector(Movement.X, Movement.Y, 0.0f), DeltaSeconds,1);
-		// SetActorLocation(FVector(CurrentTargetVector.X, CurrentTargetVector.Y, GetActorLocation().Z));
 		SetActorLocation(GetActorLocation() + FVector(Movement.X, Movement.Y, 0.0f));
 	}
 
@@ -116,8 +149,6 @@ void AECRTSCamera::BindInputMappingContext() const
 	{
 		if (const auto Input = PlayerController->GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
 		{
-			PlayerController->bShowMouseCursor = true;
-
 			if (!Input->HasMappingContext(InputMappingContext))
 			{
 				Input->ClearAllMappings();
@@ -146,6 +177,6 @@ void AECRTSCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		EnhancedInputComponent->BindAction(RotateCameraAxis, ETriggerEvent::Triggered, this, &AECRTSCamera::OnRotateCamera);
 		EnhancedInputComponent->BindAction(MoveCameraAxis, ETriggerEvent::Triggered, this, &AECRTSCamera::OnMoveCamera);
 		EnhancedInputComponent->BindAction(ZoomCamera, ETriggerEvent::Triggered, this, &AECRTSCamera::OnZoomCamera);
+		EnhancedInputComponent->BindAction(ResetCamera, ETriggerEvent::Triggered, this, &AECRTSCamera::OnResetCamera);
 	}
 }
-

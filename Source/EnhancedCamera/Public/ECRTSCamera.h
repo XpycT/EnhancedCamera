@@ -50,6 +50,8 @@ public:
 	TObjectPtr<UInputAction> MoveCameraAxis;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Inputs")
 	TObjectPtr<UInputAction> ZoomCamera;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Inputs")
+	TObjectPtr<UInputAction> ResetCamera;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Camera | Movement Settings")
 	float MoveSpeed = 50.0f;
@@ -63,16 +65,30 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Zoom Settings")
 	float ZoomSmoothness;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Rotate Settings")
+	float ViewPitchMax = 60.0f;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Rotate Settings")
+	float ViewPitchMin = -20.0f;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Rotate Settings")
+	float RotateSpeed = 50.0f;
+
 
 protected:
+	void SetInitialValues();
 	virtual void BeginPlay() override;
 	
 	UPROPERTY()
 	APlayerController* PlayerController;
 
+	UFUNCTION()
 	void OnZoomCamera(const FInputActionValue& Value);
+	UFUNCTION()
 	void OnRotateCamera(const FInputActionValue& Value);
+	UFUNCTION()
 	void OnMoveCamera(const FInputActionValue& Value);
+	UFUNCTION()
+	void OnResetCamera(const FInputActionValue& Value);
+	
 
 	void ApplyMoveCameraCommands();
 
@@ -86,6 +102,9 @@ private:
 	void RequestMoveCamera(const float X, const float Y, const float Scale);
 	UPROPERTY()
 	TArray<FMoveCameraCommand> MoveCameraCommands;
+
+	float DefaultZoom;
+	FRotator DefaultRotation;
 	
 public:	
 	virtual void Tick(float DeltaTime) override;
