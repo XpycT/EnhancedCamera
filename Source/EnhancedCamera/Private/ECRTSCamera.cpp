@@ -10,7 +10,6 @@
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
 
 AECRTSCamera::AECRTSCamera()
 {
@@ -120,6 +119,11 @@ void AECRTSCamera::OnRotateCamera(const FInputActionValue& Value)
 
 void AECRTSCamera::OnMoveCamera(const FInputActionValue& Value)
 {
+	if(CameraFollowTarget != nullptr)
+	{
+		UnFollowTarget();
+	}
+	
 	RequestMoveCamera(
 		SpringArm->GetRightVector().X,
 		SpringArm->GetRightVector().Y,
@@ -313,6 +317,14 @@ void AECRTSCamera::ViewportSizeChanged(FViewport* ViewPort, uint32 val)
 	SetBoundaries();
 }
 
+void AECRTSCamera::FollowTargetIfSet()
+{
+	if (CameraFollowTarget != nullptr)
+	{
+		SetActorLocation(CameraFollowTarget->GetActorLocation());
+	}
+}
+
 void AECRTSCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -324,4 +336,14 @@ void AECRTSCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		EnhancedInputComponent->BindAction(ZoomCamera, ETriggerEvent::Triggered, this, &AECRTSCamera::OnZoomCamera);
 		EnhancedInputComponent->BindAction(ResetCamera, ETriggerEvent::Triggered, this, &AECRTSCamera::OnResetCamera);
 	}
+}
+
+void AECRTSCamera::FollowTarget(AActor* Target)
+{
+	CameraFollowTarget = Target;
+}
+
+void AECRTSCamera::UnFollowTarget()
+{
+	CameraFollowTarget = nullptr;
 }

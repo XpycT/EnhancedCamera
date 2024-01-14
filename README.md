@@ -4,8 +4,8 @@ An easy way to add an RTS/MOBA camera to any project.
 
 ## Core Features
 
-- [ ] Follow Target
 - [ ] Camera Movement Bounds
+- [x] Follow Target
 - [x] Ground Height Adaptation
 - [x] Mouse based movement (Edge Scrolling)
 - [x] Key-based movement

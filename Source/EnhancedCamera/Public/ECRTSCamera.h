@@ -122,6 +122,7 @@ protected:
 	void ApplyDynamicCameraHeight();
 	void ApplyEdgeScrolling();
 
+	UPROPERTY()
 	float DeltaSeconds;
 	UPROPERTY()
 	float DesiredZoom;
@@ -140,9 +141,12 @@ private:
 	void SetBoundaries();
 	void ViewportSizeChanged(FViewport* ViewPort, uint32 val);
 
+	void FollowTargetIfSet();
 	
 	UPROPERTY()
 	TArray<FMoveCameraCommand> MoveCameraCommands;
+	UPROPERTY()
+	AActor* CameraFollowTarget;
 
 	float DefaultZoom;
 	FRotator DefaultRotation;
@@ -158,4 +162,9 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	UFUNCTION(BlueprintCallable, Category = "Enhanced Camera")
+	void FollowTarget(AActor* Target);
+
+	UFUNCTION(BlueprintCallable, Category = "Enhanced Camera")
+	void UnFollowTarget();
 };
