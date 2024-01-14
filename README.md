@@ -8,7 +8,7 @@ An easy way to add an RTS/MOBA camera to any project.
 - [x] Unit selection
 - [x] Follow Target
 - [x] Ground Height Adaptation
-- [x] Mouse based movement (Edge Scrolling)
+- [x] Mouse-based movement (Edge Scrolling)
 - [x] Key-based movement
 - [x] Smooth camera rotation
 - [x] Smooth camera zoom
@@ -29,3 +29,9 @@ An easy way to add an RTS/MOBA camera to any project.
 4. Create a new blueprint and inherit from `ECRTSCamera` or `BP_RTSCamera`.
 5. Open your blueprint and assign your `InputMappingContext` and `InputActions`, or use the ready-made ones from `EnhancedCamera/Content/Input/`.
 6. Add your blueprint to the scene.
+
+## Example
+
+https://github.com/XpycT/EnhancedCamera/assets/120016/050eab40-880f-4eee-adf2-a5948dc8eb87
+
+
