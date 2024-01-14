@@ -258,17 +258,32 @@ void AECRTSCamera::ApplyEdgeScrolling()
 		DirectionY = -1;
 	}
 
-	RequestMoveCamera(
+	if(CameraFollowTarget == nullptr)
+	{
+		RequestMoveCamera(
 		SpringArm->GetRightVector().X,
 		SpringArm->GetRightVector().Y,
 		DirectionY
 	);
 
-	RequestMoveCamera(
-		SpringArm->GetForwardVector().X,
-		SpringArm->GetForwardVector().Y,
-		DirectionX
-	);
+		RequestMoveCamera(
+			SpringArm->GetForwardVector().X,
+			SpringArm->GetForwardVector().Y,
+			DirectionX
+		);
+	}
+	else // rotate the camera if there is a follow target
+	{
+		if (DirectionY != 0.f)
+		{
+			AddControllerYawInput(DirectionY * RotateSpeed * DeltaSeconds);
+		}
+
+		if (DirectionX != 0.f)
+		{
+			AddControllerPitchInput(DirectionX * RotateSpeed * DeltaSeconds);
+		}
+	}
 }
 
 void AECRTSCamera::ApplyCameraBlocking()
