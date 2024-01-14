@@ -8,6 +8,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 
@@ -55,6 +56,14 @@ void AECRTSCamera::SetInitialValues()
 	DefaultZoom = SpringArm->TargetArmLength;
 	DesiredZoom = DefaultZoom;
 	DefaultRotation = GetControlRotation();
+
+	if(EnableEdgeScrolling)
+	{
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+		InputMode.SetHideCursorDuringCapture(false);
+		PlayerController->SetInputMode(InputMode);
+	}
 }
 
 // Called when the game starts or when spawned
@@ -62,8 +71,11 @@ void AECRTSCamera::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SetInitialValues();
-	
+	FTimerHandle Handler;
+	GetWorldTimerManager().SetTimer(Handler, this, &AECRTSCamera::SetBoundaries, 0.1f, false, 0.2f);
+	GEngine->GameViewport->Viewport->ViewportResizedEvent.AddUObject(this, &AECRTSCamera::ViewportSizeChanged);
+
+	SetInitialValues();	
 	BindInputMappingContext();
 }
 
@@ -75,6 +87,7 @@ void AECRTSCamera::Tick(float DeltaTime)
 	DeltaSeconds = DeltaTime;
 	ApplyCameraZoomToDesired();
 	ApplyMoveCameraCommands();
+	ApplyEdgeScrolling();
 	ApplyDynamicCameraHeight();
 }
 
@@ -148,6 +161,14 @@ void AECRTSCamera::RequestMoveCamera(const float X, const float Y, const float S
 	MoveCameraCommands.Push(MoveCameraCommand);
 }
 
+bool AECRTSCamera::IsValidMousePosition(const FVector2D Positions, const FVector4& Rules)
+{
+	const bool InputY = Positions.Y >= Rules.X && Positions.Y <= Rules.Y;
+	const bool InputX = Positions.X >= Rules.Z && Positions.X <= Rules.W;
+	return InputX && InputY;
+
+}
+
 void AECRTSCamera::BindInputMappingContext() const
 {
 	if (PlayerController && PlayerController->GetLocalPlayer())
@@ -198,6 +219,98 @@ void AECRTSCamera::ApplyDynamicCameraHeight()
 			SetActorLocation(FVector( HitResult.Location.X, HitResult.Location.Y, HitResult.Location.Z ));
 		}
 	}
+}
+
+void AECRTSCamera::ApplyEdgeScrolling()
+{
+	if (!EnableEdgeScrolling)
+	{
+		return;
+	}
+
+	float DirectionX = 0;
+	float DirectionY = 0;
+
+	FVector2D MousePosition = UWidgetLayoutLibrary::GetMousePositionOnViewport(GetWorld());
+	MousePosition = MousePosition * UWidgetLayoutLibrary::GetViewportScale(GetWorld());
+	if (this->IsValidMousePosition(MousePosition, Top))
+	{
+		DirectionX = 1;
+	}
+	else if (IsValidMousePosition(MousePosition, Bottom))
+	{
+		DirectionX = -1;
+	}
+
+	if (IsValidMousePosition(FVector2D(MousePosition.Y, MousePosition.X), Right))
+	{
+		DirectionY = 1;
+	}
+	else if (IsValidMousePosition(FVector2D(MousePosition.Y, MousePosition.X), Left))
+	{
+		DirectionY = -1;
+	}
+
+	RequestMoveCamera(
+		SpringArm->GetRightVector().X,
+		SpringArm->GetRightVector().Y,
+		DirectionY
+	);
+
+	RequestMoveCamera(
+		SpringArm->GetForwardVector().X,
+		SpringArm->GetForwardVector().Y,
+		DirectionX
+	);
+}
+
+void AECRTSCamera::SetBoundaries()
+{
+	const FVector2D Result = UWidgetLayoutLibrary::GetViewportSize(GetWorld());
+
+	Top = FVector4(0, 0, 0, 0);
+	Bottom = FVector4(0, 0, 0, 0);
+	Left = FVector4(0, 0, 0, 0);
+	Right = FVector4(0, 0, 0, 0);
+
+	Top.Y = (MovementZoneInPercent / 100.f) * Result.Y;
+	Top.W = Result.X;
+
+	Bottom.X = (1 - (MovementZoneInPercent / 100.f)) * Result.Y;
+	Bottom.Y = Result.Y;
+	Bottom.W = Result.X;
+
+	Left.Y = (MovementZoneInPercent / 100.f) * Result.X;
+	Left.W = Result.Y;
+
+	Right.X = (1 - (MovementZoneInPercent / 100.f)) * Result.X;
+	Right.Y = Result.X;
+	Right.W = Result.Y;
+
+	if (!EnableEdgeScrolling)
+	{
+		Top.X = -Deactivate;
+		Top.Z = -Deactivate;
+		Top.W = Deactivate;
+
+		Bottom.Y = Deactivate;
+		Bottom.Z = -Deactivate;
+		Bottom.W = Deactivate;
+
+		Left.X = -Deactivate;
+		Left.Z = -Deactivate;
+		Left.W = Deactivate;
+
+		Right.Y = Deactivate;
+		Right.Z = -Deactivate;
+		Right.W = Deactivate;
+	}
+
+}
+
+void AECRTSCamera::ViewportSizeChanged(FViewport* ViewPort, uint32 val)
+{
+	SetBoundaries();
 }
 
 void AECRTSCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

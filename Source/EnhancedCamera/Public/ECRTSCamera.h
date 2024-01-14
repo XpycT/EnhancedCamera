@@ -54,7 +54,18 @@ public:
 	TObjectPtr<UInputAction> ResetCamera;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Camera | Movement Settings")
-	float MoveSpeed = 5000.0f;
+	float MoveSpeed = 5000.0f;	
+	// Ignores the boundaries, allows movement with the mouse off the viewport
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enhanced Camera | Movement Settings")
+	bool EnableEdgeScrolling = true;
+	UPROPERTY(
+		EditAnywhere,
+		BlueprintReadWrite,
+		Category = "Enhanced Camera | Movement Settings",
+		meta=(EditCondition="EnableEdgeScrolling")
+		)
+	int MovementZoneInPercent = 5;
+
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enhanced Camera | Height Adjustment")
 	bool EnableDynamicCameraHeight;
@@ -105,11 +116,11 @@ protected:
 	void OnMoveCamera(const FInputActionValue& Value);
 	UFUNCTION()
 	void OnResetCamera(const FInputActionValue& Value);
-	
 
 	void ApplyMoveCameraCommands();
 	void ApplyCameraZoomToDesired() const;
 	void ApplyDynamicCameraHeight();
+	void ApplyEdgeScrolling();
 
 	float DeltaSeconds;
 	UPROPERTY()
@@ -118,11 +129,30 @@ protected:
 private:
 	void BindInputMappingContext() const;
 	void RequestMoveCamera(const float X, const float Y, const float Scale);
+
+	/**
+	 * Positions are the positions to check
+	 * The Value X(Positions) needs to be between X-Y(Rules) and Y(Positions) between Z-W(Rules) of the defined rules
+	 * @link SetBoundaries @endlink 
+	 * The Rules define the bounding Box
+	 */
+	static bool IsValidMousePosition(const FVector2D Positions, const FVector4& Rules);
+	void SetBoundaries();
+	void ViewportSizeChanged(FViewport* ViewPort, uint32 val);
+
+	
 	UPROPERTY()
 	TArray<FMoveCameraCommand> MoveCameraCommands;
 
 	float DefaultZoom;
 	FRotator DefaultRotation;
+	
+	const int Deactivate = 999999;
+	// X ist the minimal value and Y the maximum value
+	FVector4 Top = FVector4();
+	FVector4 Bottom = FVector4();
+	FVector4 Left = FVector4();
+	FVector4 Right = FVector4();
 	
 public:	
 	virtual void Tick(float DeltaTime) override;

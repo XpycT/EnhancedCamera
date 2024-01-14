@@ -4,7 +4,9 @@ An easy way to add an RTS/MOBA camera to any project.
 
 **Core Features:**
 
-- [ ] Mouse based movement
+- [ ] Follow Target
+- [ ] Camera Movement Bounds
+- [x] Mouse based movement (Edge Scrolling)
 - [x] Key-based movement
 - [x] Smooth camera rotation
 - [x] Smooth camera zoom
@@ -12,6 +14,6 @@ An easy way to add an RTS/MOBA camera to any project.
 
 **Input Actions:**
 
-- <kbd>W</kbd>,<kbd>S</kbd>,<kbd>A</kbd>,<kbd>D</kbd> - Camera movement
+- <kbd>W</kbd>,<kbd>S</kbd>,<kbd>A</kbd>,<kbd>D</kbd> or <kbd>Mouse Move</kbd> - Camera movement
 - <kbd>MMB</kbd>+<kbd>Mouse Move</kbd> - Camera rotate
 - <kbd>Scroll Up</kbd>/<kbd>Scroll Down</kbd> - Camera zoom
