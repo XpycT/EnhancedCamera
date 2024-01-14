@@ -13,7 +13,7 @@
 
 AECRTSCamera::AECRTSCamera()
 {
- 	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = true;
 
 	SphereComponent = CreateDefaultSubobject<USphereComponent>("SphereComponent");
 	SetRootComponent(SphereComponent);
@@ -27,7 +27,7 @@ AECRTSCamera::AECRTSCamera()
 	SpringArm->bEnableCameraRotationLag = true;
 	SpringArm->CameraRotationLagSpeed = 5;
 	SpringArm->bDoCollisionTest = false;
-	
+
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>("Camera");
 	CameraComponent->SetupAttachment(SpringArm);
 
@@ -43,6 +43,7 @@ AECRTSCamera::AECRTSCamera()
 	EnableDynamicCameraHeight = true;
 	FindGroundTraceLength = 100000.f;
 	CollisionChannel = ECC_WorldStatic;
+	CameraBlockingVolumeTag = FName("EnhancedCamera#CameraBlocking");
 }
 
 void AECRTSCamera::SetInitialValues()
@@ -51,12 +52,12 @@ void AECRTSCamera::SetInitialValues()
 	PlayerController->bShowMouseCursor = true;
 	PlayerController->PlayerCameraManager->ViewPitchMax = ViewPitchMax;
 	PlayerController->PlayerCameraManager->ViewPitchMin = ViewPitchMin;
-	
+
 	DefaultZoom = SpringArm->TargetArmLength;
 	DesiredZoom = DefaultZoom;
 	DefaultRotation = GetControlRotation();
 
-	if(EnableEdgeScrolling)
+	if (EnableEdgeScrolling)
 	{
 		FInputModeGameAndUI InputMode;
 		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
@@ -74,7 +75,8 @@ void AECRTSCamera::BeginPlay()
 	GetWorldTimerManager().SetTimer(Handler, this, &AECRTSCamera::SetBoundaries, 0.1f, false, 0.2f);
 	GEngine->GameViewport->Viewport->ViewportResizedEvent.AddUObject(this, &AECRTSCamera::ViewportSizeChanged);
 
-	SetInitialValues();	
+	SetInitialValues();
+	FindCameraBlockingVolume();
 	BindInputMappingContext();
 }
 
@@ -88,6 +90,8 @@ void AECRTSCamera::Tick(float DeltaTime)
 	ApplyMoveCameraCommands();
 	ApplyEdgeScrolling();
 	ApplyDynamicCameraHeight();
+	ApplyCameraBlocking();
+	FollowTargetIfSet();
 }
 
 void AECRTSCamera::OnZoomCamera(const FInputActionValue& Value)
@@ -104,12 +108,12 @@ void AECRTSCamera::OnRotateCamera(const FInputActionValue& Value)
 	if (Controller != nullptr)
 	{
 		const FVector2D LookValue = Value.Get<FVector2D>();
- 
+
 		if (LookValue.X != 0.f)
 		{
 			AddControllerYawInput(LookValue.X * RotateSpeed * DeltaSeconds);
 		}
- 
+
 		if (LookValue.Y != 0.f)
 		{
 			AddControllerPitchInput(LookValue.Y * RotateSpeed * DeltaSeconds);
@@ -119,11 +123,11 @@ void AECRTSCamera::OnRotateCamera(const FInputActionValue& Value)
 
 void AECRTSCamera::OnMoveCamera(const FInputActionValue& Value)
 {
-	if(CameraFollowTarget != nullptr)
+	if (CameraFollowTarget != nullptr)
 	{
 		UnFollowTarget();
 	}
-	
+
 	RequestMoveCamera(
 		SpringArm->GetRightVector().X,
 		SpringArm->GetRightVector().Y,
@@ -170,7 +174,6 @@ bool AECRTSCamera::IsValidMousePosition(const FVector2D Positions, const FVector
 	const bool InputY = Positions.Y >= Rules.X && Positions.Y <= Rules.Y;
 	const bool InputX = Positions.X >= Rules.Z && Positions.X <= Rules.W;
 	return InputX && InputY;
-
 }
 
 void AECRTSCamera::BindInputMappingContext() const
@@ -220,7 +223,7 @@ void AECRTSCamera::ApplyDynamicCameraHeight()
 
 		if (DidHit)
 		{
-			SetActorLocation(FVector( HitResult.Location.X, HitResult.Location.Y, HitResult.Location.Z ));
+			SetActorLocation(FVector(HitResult.Location.X, HitResult.Location.Y, HitResult.Location.Z));
 		}
 	}
 }
@@ -268,6 +271,22 @@ void AECRTSCamera::ApplyEdgeScrolling()
 	);
 }
 
+void AECRTSCamera::ApplyCameraBlocking()
+{
+	if (BlockingVolume != nullptr)
+	{
+		FVector Origin;
+		FVector Extents;
+		BlockingVolume->GetActorBounds(false, Origin, Extents);
+		SetActorLocation(
+			FVector(
+				FMath::Clamp(GetActorLocation().X, Origin.X - Extents.X, Origin.X + Extents.X),
+				FMath::Clamp(GetActorLocation().Y, Origin.Y - Extents.Y, Origin.Y + Extents.Y),
+				GetActorLocation().Z
+			));
+	}
+}
+
 void AECRTSCamera::SetBoundaries()
 {
 	const FVector2D Result = UWidgetLayoutLibrary::GetViewportSize(GetWorld());
@@ -309,7 +328,6 @@ void AECRTSCamera::SetBoundaries()
 		Right.Z = -Deactivate;
 		Right.W = Deactivate;
 	}
-
 }
 
 void AECRTSCamera::ViewportSizeChanged(FViewport* ViewPort, uint32 val)
@@ -325,13 +343,30 @@ void AECRTSCamera::FollowTargetIfSet()
 	}
 }
 
+void AECRTSCamera::FindCameraBlockingVolume()
+{
+	TArray<AActor*> BlockingVolumes;
+	UGameplayStatics::GetAllActorsOfClassWithTag(
+		GetWorld(),
+		AActor::StaticClass(),
+		CameraBlockingVolumeTag,
+		BlockingVolumes
+	);
+
+	if (BlockingVolumes.Num() > 0)
+	{
+		BlockingVolume = BlockingVolumes[0];
+	}
+}
+
 void AECRTSCamera::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	
-	if(const auto EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+
+	if (const auto EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		EnhancedInputComponent->BindAction(RotateCameraAxis, ETriggerEvent::Triggered, this, &AECRTSCamera::OnRotateCamera);
+		EnhancedInputComponent->BindAction(RotateCameraAxis, ETriggerEvent::Triggered, this,
+		                                   &AECRTSCamera::OnRotateCamera);
 		EnhancedInputComponent->BindAction(MoveCameraAxis, ETriggerEvent::Triggered, this, &AECRTSCamera::OnMoveCamera);
 		EnhancedInputComponent->BindAction(ZoomCamera, ETriggerEvent::Triggered, this, &AECRTSCamera::OnZoomCamera);
 		EnhancedInputComponent->BindAction(ResetCamera, ETriggerEvent::Triggered, this, &AECRTSCamera::OnResetCamera);

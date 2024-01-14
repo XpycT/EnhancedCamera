@@ -121,11 +121,14 @@ protected:
 	void ApplyCameraZoomToDesired() const;
 	void ApplyDynamicCameraHeight();
 	void ApplyEdgeScrolling();
+	void ApplyCameraBlocking();
 
 	UPROPERTY()
 	float DeltaSeconds;
 	UPROPERTY()
 	float DesiredZoom;
+	UPROPERTY()
+	AActor* BlockingVolume;
 
 private:
 	void BindInputMappingContext() const;
@@ -142,11 +145,14 @@ private:
 	void ViewportSizeChanged(FViewport* ViewPort, uint32 val);
 
 	void FollowTargetIfSet();
+	void FindCameraBlockingVolume();
 	
 	UPROPERTY()
 	TArray<FMoveCameraCommand> MoveCameraCommands;
 	UPROPERTY()
 	AActor* CameraFollowTarget;
+	UPROPERTY()
+	FName CameraBlockingVolumeTag;
 
 	float DefaultZoom;
 	FRotator DefaultRotation;
