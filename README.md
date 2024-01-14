@@ -18,6 +18,7 @@ An easy way to add an RTS/MOBA camera to any project.
 - <kbd>W</kbd>,<kbd>S</kbd>,<kbd>A</kbd>,<kbd>D</kbd> or <kbd>Mouse Move</kbd> - Camera movement
 - <kbd>MMB</kbd>+<kbd>Mouse Move</kbd> - Camera rotate
 - <kbd>Scroll Up</kbd>/<kbd>Scroll Down</kbd> - Camera zoom
+- <kbd>Home</kbd> - Reset Camera
 
 ## Installation
 
